@@ -7,7 +7,14 @@
       "Bash(curl:*)",
       "Bash(cat:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Avatar Project with Next.js\n\n- Next.js 14 with TypeScript and Tailwind CSS\n- 3D Avatar scene with Three.js/React Three Fiber\n- Chat functionality with Claude AI integration\n- Text-to-Speech with ElevenLabs API\n- Speech recognition for voice input\n- Lip sync animation system\n- Office environment scene\n- Zustand state management\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd 3D avatar and office background image\n\n- Add Michelle avatar model \\(GLB from Three.js\\)\n- Add office background image from Unsplash\n- Update Scene.tsx to use image background instead of 3D office\n- Update Avatar.tsx with animation mixer support\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

@@ -157,10 +157,11 @@ function PlaceholderAvatar({ position }: AvatarProps) {
   )
 }
 
-// Avatar con modelo GLB de Ready Player Me
+// Avatar con modelo GLB
 function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
   const meshRef = useRef<THREE.SkinnedMesh | null>(null)
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
 
   const { currentEmotion, isTalking, currentViseme } = useChatStore()
 
@@ -168,90 +169,114 @@ function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
   const blinkState = useRef({ nextBlink: 0, isBlinking: false, blinkProgress: 0 })
 
   // Estado para movimiento idle
-  const idleState = useRef({ breathPhase: 0, headPhase: 0 })
+  const idleState = useRef({ breathPhase: 0, headPhase: 0, talkPhase: 0 })
 
   // Cargar el modelo GLB
-  const { scene } = useGLTF('/models/avatar.glb')
+  const { scene, animations } = useGLTF('/models/avatar.glb')
 
-  // Buscar el mesh con morph targets
+  // Configurar el modelo y animaciones
   useEffect(() => {
-    scene.traverse((child) => {
-      if (child instanceof THREE.SkinnedMesh && child.morphTargetDictionary) {
+    // Clonar la escena para evitar conflictos
+    const clonedScene = scene.clone()
+
+    // Buscar el mesh con morph targets
+    clonedScene.traverse((child) => {
+      if (child instanceof THREE.SkinnedMesh) {
         meshRef.current = child
+        child.castShadow = true
+        child.receiveShadow = true
       }
     })
-  }, [scene])
+
+    // Configurar mixer de animaciones si hay
+    if (animations && animations.length > 0) {
+      mixerRef.current = new THREE.AnimationMixer(clonedScene)
+      const idleAnimation = animations[0]
+      if (idleAnimation) {
+        const action = mixerRef.current.clipAction(idleAnimation)
+        action.play()
+      }
+    }
+
+    return () => {
+      if (mixerRef.current) {
+        mixerRef.current.stopAllAction()
+      }
+    }
+  }, [scene, animations])
 
   // Animación frame a frame
   useFrame((state, delta) => {
-    if (!meshRef.current?.morphTargetInfluences || !meshRef.current?.morphTargetDictionary) {
-      return
+    // Actualizar mixer de animaciones
+    if (mixerRef.current) {
+      mixerRef.current.update(delta)
     }
 
-    const morphDict = meshRef.current.morphTargetDictionary
-    const morphInfluences = meshRef.current.morphTargetInfluences
+    // Si tiene morph targets, aplicar expresiones
+    if (meshRef.current?.morphTargetInfluences && meshRef.current?.morphTargetDictionary) {
+      const morphDict = meshRef.current.morphTargetDictionary
+      const morphInfluences = meshRef.current.morphTargetInfluences
 
-    // Reset all morph targets gradually
-    for (let i = 0; i < morphInfluences.length; i++) {
-      morphInfluences[i] = THREE.MathUtils.lerp(morphInfluences[i], 0, delta * 5)
-    }
-
-    // Aplicar emoción
-    const emotionTargets = emotionMorphs[currentEmotion] || {}
-    for (const [morphName, value] of Object.entries(emotionTargets)) {
-      const index = morphDict[morphName]
-      if (index !== undefined) {
-        morphInfluences[index] = THREE.MathUtils.lerp(
-          morphInfluences[index],
-          value,
-          delta * 3
-        )
+      // Reset all morph targets gradually
+      for (let i = 0; i < morphInfluences.length; i++) {
+        morphInfluences[i] = THREE.MathUtils.lerp(morphInfluences[i], 0, delta * 5)
       }
-    }
 
-    // Aplicar visema si está hablando
-    if (isTalking) {
-      const visemeTargets = visemeMorphs[currentViseme] || visemeMorphs.viseme_sil
-      for (const [morphName, value] of Object.entries(visemeTargets)) {
+      // Aplicar emoción
+      const emotionTargets = emotionMorphs[currentEmotion] || {}
+      for (const [morphName, value] of Object.entries(emotionTargets)) {
         const index = morphDict[morphName]
         if (index !== undefined) {
           morphInfluences[index] = THREE.MathUtils.lerp(
             morphInfluences[index],
             value,
-            delta * 10
+            delta * 3
           )
         }
       }
-    }
 
-    // Parpadeo automático
-    const time = state.clock.elapsedTime
-    const blink = blinkState.current
-
-    if (time > blink.nextBlink && !blink.isBlinking) {
-      blink.isBlinking = true
-      blink.blinkProgress = 0
-    }
-
-    if (blink.isBlinking) {
-      blink.blinkProgress += delta * 8
-
-      // Curva de parpadeo: cerrar y abrir rápido
-      const blinkValue = Math.sin(blink.blinkProgress * Math.PI)
-
-      const blinkLeftIndex = morphDict['eyeBlinkLeft']
-      const blinkRightIndex = morphDict['eyeBlinkRight']
-
-      if (blinkLeftIndex !== undefined) {
-        morphInfluences[blinkLeftIndex] = blinkValue
-      }
-      if (blinkRightIndex !== undefined) {
-        morphInfluences[blinkRightIndex] = blinkValue
+      // Aplicar visema si está hablando
+      if (isTalking) {
+        const visemeTargets = visemeMorphs[currentViseme] || visemeMorphs.viseme_sil
+        for (const [morphName, value] of Object.entries(visemeTargets)) {
+          const index = morphDict[morphName]
+          if (index !== undefined) {
+            morphInfluences[index] = THREE.MathUtils.lerp(
+              morphInfluences[index],
+              value,
+              delta * 10
+            )
+          }
+        }
       }
 
-      if (blink.blinkProgress >= 1) {
-        blink.isBlinking = false
-        blink.nextBlink = time + 2 + Math.random() * 4 // Próximo parpadeo en 2-6 segundos
+      // Parpadeo automático
+      const time = state.clock.elapsedTime
+      const blink = blinkState.current
+
+      if (time > blink.nextBlink && !blink.isBlinking) {
+        blink.isBlinking = true
+        blink.blinkProgress = 0
+      }
+
+      if (blink.isBlinking) {
+        blink.blinkProgress += delta * 8
+        const blinkValue = Math.sin(blink.blinkProgress * Math.PI)
+
+        const blinkLeftIndex = morphDict['eyeBlinkLeft']
+        const blinkRightIndex = morphDict['eyeBlinkRight']
+
+        if (blinkLeftIndex !== undefined) {
+          morphInfluences[blinkLeftIndex] = blinkValue
+        }
+        if (blinkRightIndex !== undefined) {
+          morphInfluences[blinkRightIndex] = blinkValue
+        }
+
+        if (blink.blinkProgress >= 1) {
+          blink.isBlinking = false
+          blink.nextBlink = time + 2 + Math.random() * 4
+        }
       }
     }
 
@@ -261,12 +286,21 @@ function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
       idleState.current.headPhase += delta * 0.3
 
       // Respiración sutil
-      const breathOffset = Math.sin(idleState.current.breathPhase) * 0.002
+      const breathOffset = Math.sin(idleState.current.breathPhase) * 0.005
       group.current.position.y = position[1] + breathOffset
 
       // Movimiento sutil de cabeza
-      const headOffset = Math.sin(idleState.current.headPhase) * 0.01
+      const headOffset = Math.sin(idleState.current.headPhase) * 0.02
       group.current.rotation.y = headOffset
+
+      // Movimiento de habla adicional
+      if (isTalking) {
+        idleState.current.talkPhase += delta * 8
+        const talkNod = Math.sin(idleState.current.talkPhase) * 0.01
+        group.current.rotation.x = talkNod
+      } else {
+        group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, 0, delta * 3)
+      }
     }
   })
 
