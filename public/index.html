@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Oficinista por voz</title>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; display: grid; grid-template-columns: 1fr 360px; height: 100vh; }
+      #stage { background: #0b0f14; }
+      #panel { padding: 16px; background: #111827; color: #e5e7eb; overflow: auto; }
+      button { width: 100%; padding: 12px; margin: 6px 0; cursor: pointer; }
+      #log { white-space: pre-wrap; font-size: 13px; opacity: 0.9; }
+      .pill { display:inline-block; padding:4px 8px; border-radius:999px; background:#1f2937; margin:0 6px 10px 0; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+
+    <div id="panel">
+      <div class="pill" id="status">Desconectado</div>
+      <button id="btnStart">🎙️ Conectar y hablar</button>
+      <button id="btnStop" disabled>⏹️ Parar</button>
+
+      <!-- audio remoto del modelo -->
+      <audio id="remoteAudio" autoplay></audio>
+
+      <h3>Transcripción</h3>
+      <div id="log"></div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
