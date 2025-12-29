@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber'
 import { Suspense } from 'react'
-import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
+import { OrbitControls, Environment } from '@react-three/drei'
 import { Avatar } from './Avatar'
 
 function LoadingFallback() {
@@ -29,8 +29,8 @@ export default function Scene() {
       {/* Canvas 3D transparente sobre la imagen */}
       <Canvas
         camera={{
-          position: [0, 1.5, 2.5],
-          fov: 50,
+          position: [0, 0.3, 1.8],
+          fov: 45,
           near: 0.1,
           far: 100,
         }}
@@ -39,43 +39,36 @@ export default function Scene() {
         style={{ background: 'transparent' }}
       >
         {/* Iluminación */}
-        <ambientLight intensity={0.6} />
+        <ambientLight intensity={0.7} />
         <directionalLight
           position={[5, 5, 5]}
-          intensity={1.2}
+          intensity={1.0}
           castShadow
           shadow-mapSize={[2048, 2048]}
         />
-        <directionalLight position={[-5, 3, -5]} intensity={0.4} />
+        <directionalLight position={[-5, 3, -5]} intensity={0.3} />
 
         {/* Luz de relleno frontal para el avatar */}
-        <pointLight position={[0, 2, 3]} intensity={0.6} color="#ffffff" />
+        <pointLight position={[0, 1, 2]} intensity={0.5} color="#ffffff" />
 
         <Suspense fallback={<LoadingFallback />}>
           {/* Entorno HDR para reflejos realistas */}
           <Environment preset="apartment" />
 
-          {/* Avatar 3D */}
-          <Avatar position={[0, -1, 0]} />
+          {/* Avatar 3D - posicionado para parecer sentado */}
+          <Avatar position={[0, -0.85, 0]} />
 
-          {/* Sombras de contacto */}
-          <ContactShadows
-            position={[0, -1, 0]}
-            opacity={0.4}
-            scale={10}
-            blur={2}
-            far={4}
-          />
         </Suspense>
 
-        {/* Controles de cámara */}
+        {/* Controles de cámara - limitados para mantener la vista de escritorio */}
         <OrbitControls
-          target={[0, 0.5, 0]}
-          minDistance={1.5}
-          maxDistance={5}
-          minPolarAngle={Math.PI / 4}
-          maxPolarAngle={Math.PI / 2}
+          target={[0, 0.2, 0]}
+          minDistance={1.2}
+          maxDistance={2.5}
+          minPolarAngle={Math.PI / 3}
+          maxPolarAngle={Math.PI / 2.2}
           enablePan={false}
+          enableZoom={false}
         />
       </Canvas>
     </div>
