@@ -34,6 +34,7 @@ app.post("/session", async (req, res) => {
   res.type("application/sdp").send(text);
 });
 
-app.listen(3000, () => {
-  console.log("OK -> http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`OK -> http://localhost:${PORT}`);
 });
