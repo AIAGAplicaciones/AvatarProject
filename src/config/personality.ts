@@ -34,9 +34,10 @@ Por ejemplo: "¡Claro que puedo ayudarte con eso! [happy]"`,
   // ID de la voz de ElevenLabs
   // Voces naturales para español:
   // - "ThT5KcBeYPX3keUQqHPh" (Charlotte - femenina, muy natural)
-  // - "pNInz6obpgDQGcFmaJgB" (Adam - masculina)
+  // - "pNInz6obpgDQGcFmaJgB" (Adam - masculina, profesional)
   // - "jBpfuIE2acCO8z3wKNLl" (Gigi - femenina multilingual)
-  voiceId: "ThT5KcBeYPX3keUQqHPh",
+  // - "onwK4e9ZLuTAKqWW03F9" (Daniel - masculina británica)
+  voiceId: "pNInz6obpgDQGcFmaJgB",
 
   // Idioma principal
   language: "es-ES"
