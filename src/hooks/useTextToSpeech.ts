@@ -6,12 +6,14 @@ import { useLipSync } from './useLipSync'
 
 export function useTextToSpeech() {
   const { setSpeaking, setTalking } = useChatStore()
-  const { startLipSync, stopLipSync } = useLipSync()
+  const { startLipSync, startLipSyncWithText, stopLipSync } = useLipSync()
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const currentTextRef = useRef<string>('')
 
   const speak = useCallback(async (text: string) => {
     setSpeaking(true)
     setTalking(true)
+    currentTextRef.current = text
 
     try {
       // Intentar usar ElevenLabs primero
@@ -30,8 +32,19 @@ export function useTextToSpeech() {
           const audio = new Audio(audioUrl)
           audioRef.current = audio
 
+          // Esperar a que se cargue el metadata para obtener la duración
+          audio.onloadedmetadata = () => {
+            // Iniciar lip sync basado en texto con la duración del audio
+            if (audio.duration && currentTextRef.current) {
+              startLipSyncWithText(currentTextRef.current, audio.duration)
+            }
+          }
+
           audio.onplay = () => {
-            startLipSync(audio)
+            // Si no tenemos duración, usar lip sync básico
+            if (!audio.duration) {
+              startLipSync(audio, currentTextRef.current)
+            }
           }
 
           audio.onended = () => {
@@ -68,7 +81,7 @@ export function useTextToSpeech() {
       setSpeaking(false)
       setTalking(false)
     }
-  }, [setSpeaking, setTalking, startLipSync, stopLipSync])
+  }, [setSpeaking, setTalking, startLipSync, startLipSyncWithText, stopLipSync])
 
   // Fallback: Web Speech API
   const speakWithWebSpeech = useCallback((text: string): Promise<void> => {

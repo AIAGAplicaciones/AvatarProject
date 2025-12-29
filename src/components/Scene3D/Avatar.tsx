@@ -43,24 +43,13 @@ const emotionMorphs: Record<string, Record<string, number>> = {
   },
 }
 
-// Mapeo de visemas para lip-sync
-const visemeMorphs: Record<string, Record<string, number>> = {
-  viseme_sil: { jawOpen: 0 },
-  viseme_PP: { jawOpen: 0.05, mouthPucker: 0.4 },
-  viseme_FF: { jawOpen: 0.1, mouthFunnel: 0.3 },
-  viseme_TH: { jawOpen: 0.15, tongueOut: 0.3 },
-  viseme_DD: { jawOpen: 0.2, mouthOpen: 0.1 },
-  viseme_kk: { jawOpen: 0.15, mouthOpen: 0.2 },
-  viseme_CH: { jawOpen: 0.2, mouthPucker: 0.3 },
-  viseme_SS: { jawOpen: 0.1, mouthSmile: 0.2 },
-  viseme_nn: { jawOpen: 0.15, mouthClose: 0.3 },
-  viseme_RR: { jawOpen: 0.2, mouthRollLower: 0.3 },
-  viseme_aa: { jawOpen: 0.5, mouthOpen: 0.6 },
-  viseme_E: { jawOpen: 0.3, mouthSmile: 0.3 },
-  viseme_I: { jawOpen: 0.15, mouthSmile: 0.5 },
-  viseme_O: { jawOpen: 0.4, mouthPucker: 0.5 },
-  viseme_U: { jawOpen: 0.2, mouthPucker: 0.7 },
-}
+// Lista de visemas de Oculus (Ready Player Me)
+// Estos son morph targets directos en el modelo
+const OCULUS_VISEMES = [
+  'viseme_sil', 'viseme_PP', 'viseme_FF', 'viseme_TH', 'viseme_DD',
+  'viseme_kk', 'viseme_CH', 'viseme_SS', 'viseme_nn', 'viseme_RR',
+  'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U'
+]
 
 interface AvatarProps {
   position?: [number, number, number]
@@ -160,7 +149,7 @@ function PlaceholderAvatar({ position }: AvatarProps) {
 // Avatar con modelo GLB
 function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
   const group = useRef<THREE.Group>(null)
-  const meshRef = useRef<THREE.SkinnedMesh | null>(null)
+  const meshesRef = useRef<THREE.SkinnedMesh[]>([])
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
 
   const { currentEmotion, isTalking, currentViseme } = useChatStore()
@@ -176,21 +165,22 @@ function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
 
   // Configurar el modelo y animaciones
   useEffect(() => {
-    // Clonar la escena para evitar conflictos
-    const clonedScene = scene.clone()
+    meshesRef.current = []
 
-    // Buscar el mesh con morph targets
-    clonedScene.traverse((child) => {
+    // Buscar TODOS los meshes con morph targets
+    scene.traverse((child) => {
       if (child instanceof THREE.SkinnedMesh) {
-        meshRef.current = child
         child.castShadow = true
         child.receiveShadow = true
+        if (child.morphTargetDictionary && child.morphTargetInfluences) {
+          meshesRef.current.push(child)
+        }
       }
     })
 
     // Configurar mixer de animaciones si hay
     if (animations && animations.length > 0) {
-      mixerRef.current = new THREE.AnimationMixer(clonedScene)
+      mixerRef.current = new THREE.AnimationMixer(scene)
       const idleAnimation = animations[0]
       if (idleAnimation) {
         const action = mixerRef.current.clipAction(idleAnimation)
@@ -212,14 +202,16 @@ function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
       mixerRef.current.update(delta)
     }
 
-    // Si tiene morph targets, aplicar expresiones
-    if (meshRef.current?.morphTargetInfluences && meshRef.current?.morphTargetDictionary) {
-      const morphDict = meshRef.current.morphTargetDictionary
-      const morphInfluences = meshRef.current.morphTargetInfluences
+    // Aplicar morph targets a TODOS los meshes
+    for (const mesh of meshesRef.current) {
+      if (!mesh.morphTargetInfluences || !mesh.morphTargetDictionary) continue
 
-      // Reset all morph targets gradually
+      const morphDict = mesh.morphTargetDictionary
+      const morphInfluences = mesh.morphTargetInfluences
+
+      // Reset all morph targets gradually (excepto visemas activos)
       for (let i = 0; i < morphInfluences.length; i++) {
-        morphInfluences[i] = THREE.MathUtils.lerp(morphInfluences[i], 0, delta * 5)
+        morphInfluences[i] = THREE.MathUtils.lerp(morphInfluences[i], 0, delta * 8)
       }
 
       // Aplicar emoción
@@ -235,18 +227,16 @@ function GLBAvatar({ position = [0, 0, 0] }: AvatarProps) {
         }
       }
 
-      // Aplicar visema si está hablando
-      if (isTalking) {
-        const visemeTargets = visemeMorphs[currentViseme] || visemeMorphs.viseme_sil
-        for (const [morphName, value] of Object.entries(visemeTargets)) {
-          const index = morphDict[morphName]
-          if (index !== undefined) {
-            morphInfluences[index] = THREE.MathUtils.lerp(
-              morphInfluences[index],
-              value,
-              delta * 10
-            )
-          }
+      // Aplicar visema DIRECTO si está hablando (Ready Player Me tiene los visemas como morph targets)
+      if (isTalking && currentViseme) {
+        const visemeIndex = morphDict[currentViseme]
+        if (visemeIndex !== undefined) {
+          // Aplicar el visema actual con intensidad alta
+          morphInfluences[visemeIndex] = THREE.MathUtils.lerp(
+            morphInfluences[visemeIndex],
+            1.0,
+            delta * 15
+          )
         }
       }
 
