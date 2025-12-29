@@ -10,31 +10,44 @@ const ui = {
   remoteAudio: document.getElementById("remoteAudio"),
 };
 
-let pc = null;
-let dc = null;
-let localStream = null;
+function logLine(s) {
+  ui.log.textContent += (ui.log.textContent ? "\n" : "") + s;
+}
 
-let audioCtx = null;
-let analyser = null;
-let speakingLevel = 0; // 0..1 suavizado
-
-// ====== THREE (avatar) ======
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(ui.stage.clientWidth, ui.stage.clientHeight);
+// ===== THREE: setup robusto =====
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 ui.stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(35, ui.stage.clientWidth / ui.stage.clientHeight, 0.1, 100);
-camera.position.set(0, 1.5, 2.4);
+scene.background = new THREE.Color(0x0b0f14);
 
-const light = new THREE.DirectionalLight(0xffffff, 1.2);
-light.position.set(2, 4, 2);
-scene.add(light);
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 200);
+camera.position.set(0, 1.4, 2.2);
+camera.lookAt(0, 1.2, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+dir.position.set(2, 4, 2);
+scene.add(dir);
+
+// Algo visible SIEMPRE (para saber si el canvas funciona)
+const grid = new THREE.GridHelper(6, 12);
+grid.position.y = 0;
+scene.add(grid);
+
+function resizeRenderer() {
+  const w = ui.stage.clientWidth || 1;
+  const h = ui.stage.clientHeight || 1;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", resizeRenderer);
+resizeRenderer();
 
 let avatarRoot = null;
-let mouthTarget = null;   // referencia al mesh con morph targets
-let mouthIndex = null;    // índice del morph de boca
+let mouthTarget = null;
+let mouthIndex = null;
 let blinkIndex = null;
 
 function findMorphIndex(mesh, keys) {
@@ -45,25 +58,67 @@ function findMorphIndex(mesh, keys) {
   return null;
 }
 
+function frameObject(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  // centra el modelo
+  obj.position.x += (obj.position.x - center.x);
+  obj.position.y += (obj.position.y - center.y);
+  obj.position.z += (obj.position.z - center.z);
+
+  // distancia de cámara según tamaño
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const fov = camera.fov * (Math.PI / 180);
+  let camDist = (maxDim / 2) / Math.tan(fov / 2);
+  camDist *= 1.6;
+
+  camera.position.set(0, maxDim * 0.6, camDist);
+  camera.lookAt(0, maxDim * 0.4, 0);
+
+  camera.near = camDist / 100;
+  camera.far = camDist * 100;
+  camera.updateProjectionMatrix();
+}
+
 async function loadAvatar() {
+  logLine("Cargando /avatar.glb ...");
   const loader = new GLTFLoader();
+
   const gltf = await loader.loadAsync("/avatar.glb");
   avatarRoot = gltf.scene;
-  avatarRoot.position.set(0, 0, 0);
-  scene.add(avatarRoot);
 
-  // Busca el primer mesh con morph targets
+  // por si viene enorme/pequeño: normaliza un poco
   avatarRoot.traverse((o) => {
-    if (!mouthTarget && o.isMesh && o.morphTargetInfluences && o.morphTargetInfluences.length) {
-      mouthTarget = o;
+    if (o.isMesh) {
+      o.frustumCulled = false; // evita rarezas de culling
+      o.castShadow = false;
+      o.receiveShadow = false;
+
+      // Buscar morph targets
+      if (!mouthTarget && o.morphTargetInfluences && o.morphTargetInfluences.length) {
+        mouthTarget = o;
+        mouthIndex = findMorphIndex(o, ["JawOpen", "jawOpen", "MouthOpen", "mouthOpen", "viseme_aa"]);
+        blinkIndex = findMorphIndex(o, ["Blink", "blink", "EyeBlink", "eyeBlink", "eyeBlinkLeft"]);
+      }
     }
   });
 
-  if (mouthTarget) {
-    // Intenta nombres típicos
-    mouthIndex = findMorphIndex(mouthTarget, ["JawOpen", "jawOpen", "MouthOpen", "mouthOpen", "viseme_aa"]);
-    blinkIndex = findMorphIndex(mouthTarget, ["Blink", "blink", "EyeBlink", "eyeBlink"]);
-  }
+  scene.add(avatarRoot);
+  frameObject(avatarRoot);
+
+  logLine("Avatar cargado ✅");
+  if (mouthIndex !== null) logLine("Lip-sync disponible ✅");
+}
+
+function addFallbackCube() {
+  const geo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x44aa88 });
+  const cube = new THREE.Mesh(geo, mat);
+  cube.position.set(0, 0.25, 0);
+  scene.add(cube);
+  logLine("Mostrando cubo fallback (no se cargó el avatar).");
 }
 
 function setMorph(idx, v) {
@@ -71,29 +126,11 @@ function setMorph(idx, v) {
   mouthTarget.morphTargetInfluences[idx] = THREE.MathUtils.clamp(v, 0, 1);
 }
 
-let tBlink = 0;
-function animate(dt) {
-  // Lip-sync por energía del audio (simple pero funciona)
-  setMorph(mouthIndex, speakingLevel);
+// ===== AUDIO -> mouth level =====
+let audioCtx = null;
+let analyser = null;
+let speakingLevel = 0;
 
-  // Parpadeo "humano"
-  tBlink += dt;
-  if (blinkIndex != null) {
-    const blink = (Math.sin(tBlink * 0.9) > 0.995) ? 1 : 0;
-    setMorph(blinkIndex, blink);
-  }
-
-  renderer.render(scene, camera);
-  requestAnimationFrame((t) => animate((t / 1000) % 1));
-}
-
-window.addEventListener("resize", () => {
-  renderer.setSize(ui.stage.clientWidth, ui.stage.clientHeight);
-  camera.aspect = ui.stage.clientWidth / ui.stage.clientHeight;
-  camera.updateProjectionMatrix();
-});
-
-// ====== AUDIO -> mouth level ======
 function attachAnalyserFromRemoteStream(stream) {
   audioCtx ??= new (window.AudioContext || window.webkitAudioContext)();
   const src = audioCtx.createMediaStreamSource(stream);
@@ -113,8 +150,8 @@ function attachAnalyserFromRemoteStream(stream) {
       const x = (data[i] - 128) / 128;
       sum += x * x;
     }
-    const rms = Math.sqrt(sum / data.length); // ~0..0.2 típico
-    const target = THREE.MathUtils.clamp(rms * 6.0, 0, 1); // ganancia
+    const rms = Math.sqrt(sum / data.length);
+    const target = THREE.MathUtils.clamp(rms * 6.0, 0, 1);
 
     // Suavizado
     speakingLevel = speakingLevel * 0.85 + target * 0.15;
@@ -123,11 +160,32 @@ function attachAnalyserFromRemoteStream(stream) {
   tick();
 }
 
-// ====== REALTIME (WebRTC) ======
-function logAppend(text) {
-  ui.log.textContent += text;
-  ui.log.scrollTop = ui.log.scrollHeight;
+// ===== RENDER LOOP =====
+let lastT = performance.now();
+let tBlink = 0;
+
+function tick(t) {
+  const dt = Math.min((t - lastT) / 1000, 0.05);
+  lastT = t;
+
+  // Lip-sync por energía del audio
+  setMorph(mouthIndex, speakingLevel);
+
+  // Parpadeo "humano"
+  tBlink += dt;
+  if (blinkIndex != null) {
+    const blink = (Math.sin(tBlink * 0.9) > 0.995) ? 1 : 0;
+    setMorph(blinkIndex, blink);
+  }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
 }
+
+// ===== WEBRTC (OpenAI Realtime) =====
+let pc = null;
+let dc = null;
+let localStream = null;
 
 function setStatus(s) {
   ui.status.textContent = s;
@@ -154,10 +212,10 @@ async function connectRealtime() {
 
     // Muestra transcripción del audio de salida si llega
     if (evt.type === "response.output_audio_transcript.delta" && evt.delta) {
-      logAppend(evt.delta);
+      logLine(evt.delta);
     }
     if (evt.type === "response.output_audio_transcript.done") {
-      logAppend("\n\n");
+      logLine("\n");
     }
   };
 
@@ -189,6 +247,13 @@ async function connectRealtime() {
     body: offer.sdp,
   });
 
+  if (!sdpResponse.ok) {
+    const err = await sdpResponse.text();
+    logLine("Error conectando: " + err);
+    setStatus("Error");
+    return;
+  }
+
   const answer = { type: "answer", sdp: await sdpResponse.text() };
   await pc.setRemoteDescription(answer);
 }
@@ -208,11 +273,10 @@ function disconnectRealtime() {
   setStatus("Desconectado");
 }
 
-// ====== UI ======
+// ===== UI =====
 ui.btnStart.onclick = async () => {
   ui.btnStart.disabled = true;
   ui.btnStop.disabled = false;
-  ui.log.textContent = "";
   setStatus("Conectando…");
   await connectRealtime();
 };
@@ -223,6 +287,14 @@ ui.btnStop.onclick = () => {
   disconnectRealtime();
 };
 
-// Arranca escena
-await loadAvatar();
-requestAnimationFrame((t) => animate((t / 1000) % 1));
+// ===== INIT =====
+(async () => {
+  try {
+    await loadAvatar();
+  } catch (e) {
+    console.error(e);
+    logLine("ERROR cargando avatar: " + (e?.message || e));
+    addFallbackCube();
+  }
+  requestAnimationFrame(tick);
+})();
