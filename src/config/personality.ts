@@ -31,9 +31,12 @@ Al final de cada respuesta, incluye entre corchetes la emoción que deberías mo
 
 Por ejemplo: "¡Claro que puedo ayudarte con eso! [happy]"`,
 
-  // ID de la voz de ElevenLabs (puedes cambiarlo por otra voz)
-  // Voces gratuitas populares: "21m00Tcm4TlvDq8ikWAM" (Rachel), "AZnzlk1XvdvUeBnXmlld" (Domi)
-  voiceId: "21m00Tcm4TlvDq8ikWAM",
+  // ID de la voz de ElevenLabs
+  // Voces naturales para español:
+  // - "ThT5KcBeYPX3keUQqHPh" (Charlotte - femenina, muy natural)
+  // - "pNInz6obpgDQGcFmaJgB" (Adam - masculina)
+  // - "jBpfuIE2acCO8z3wKNLl" (Gigi - femenina multilingual)
+  voiceId: "ThT5KcBeYPX3keUQqHPh",
 
   // Idioma principal
   language: "es-ES"
