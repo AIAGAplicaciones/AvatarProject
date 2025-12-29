@@ -29,8 +29,8 @@ export default function Scene() {
       {/* Canvas 3D transparente sobre la imagen */}
       <Canvas
         camera={{
-          position: [0, 0.35, 0.9],
-          fov: 30,
+          position: [0, 0.15, 0.8],
+          fov: 35,
           near: 0.1,
           far: 100,
         }}
@@ -55,17 +55,17 @@ export default function Scene() {
           {/* Entorno HDR para reflejos realistas */}
           <Environment preset="apartment" />
 
-          {/* Avatar 3D - posicionado detrás del escritorio */}
-          <Avatar position={[0, -1.55, 0]} />
+          {/* Avatar 3D half-body - posicionado detrás del escritorio */}
+          <Avatar position={[0, -0.65, 0]} />
 
         </Suspense>
 
         {/* Controles de cámara - limitados para mantener la vista de escritorio */}
         <OrbitControls
-          target={[0, 0.25, 0]}
-          minDistance={0.6}
-          maxDistance={1.5}
-          minPolarAngle={Math.PI / 2.3}
+          target={[0, 0.1, 0]}
+          minDistance={0.5}
+          maxDistance={1.2}
+          minPolarAngle={Math.PI / 2.5}
           maxPolarAngle={Math.PI / 2}
           enablePan={false}
           enableZoom={false}
