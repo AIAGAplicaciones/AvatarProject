@@ -9,9 +9,6 @@ window.addEventListener("unhandledrejection", (e) => {
   if (log) log.textContent += `\n[PROMISE ERROR] ${e.reason}\n`;
 });
 
-const _stage = document.getElementById("stage");
-if (_stage) _stage.style.background = "#3b0764"; // morado para confirmar que JS corre
-
 const _log = document.getElementById("log");
 if (_log) _log.textContent = "[OK] app.js se está ejecutando\n";
 
@@ -32,26 +29,27 @@ function logLine(s) {
   ui.log.textContent += (ui.log.textContent ? "\n" : "") + s;
 }
 
-// ===== THREE: setup robusto =====
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+// ===== THREE: setup con fondo transparente =====
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setClearAlpha(0); // transparente para ver el fondo CSS
 ui.stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0f14);
+// NO scene.background - dejamos transparente
 
 const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 200);
 camera.position.set(0, 1.4, 2.2);
 camera.lookAt(0, 1.2, 0);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 const dir = new THREE.DirectionalLight(0xffffff, 1.2);
 dir.position.set(2, 4, 2);
 scene.add(dir);
 
-// Algo visible SIEMPRE (para saber si el canvas funciona)
-const grid = new THREE.GridHelper(6, 12);
-grid.position.y = 0;
-scene.add(grid);
+// Luz de relleno frontal
+const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+fill.position.set(0, 1, 3);
+scene.add(fill);
 
 function resizeRenderer() {
   const w = ui.stage.clientWidth || 1;
