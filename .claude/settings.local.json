@@ -17,7 +17,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd 3D avatar and office background image\n\n- Add Michelle avatar model \\(GLB from Three.js\\)\n- Add office background image from Unsplash\n- Update Scene.tsx to use image background instead of 3D office\n- Update Avatar.tsx with animation mixer support\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate avatar with Ready Player Me model \\(blendshapes + visemes\\)\n\n- Realistic avatar with ARKit blendshapes \\(52 expressions\\)\n- Oculus Visemes for lip sync \\(15 visemes\\)\n- Full body avatar for better presentation\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

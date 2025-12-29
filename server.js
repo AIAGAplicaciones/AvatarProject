@@ -34,6 +34,9 @@ app.post("/session", async (req, res) => {
   res.type("application/sdp").send(text);
 });
 
+// Servir Three.js desde node_modules
+app.use("/vendor", express.static("node_modules"));
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`OK -> http://localhost:${PORT}`);

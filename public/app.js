@@ -1,5 +1,23 @@
-import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
-import { GLTFLoader } from "https://unpkg.com/three@0.161.0/examples/jsm/loaders/GLTFLoader.js";
+// ===== DEBUG: muestra errores en el panel =====
+window.addEventListener("error", (e) => {
+  const log = document.getElementById("log");
+  if (log) log.textContent += `\n[JS ERROR] ${e.message}\n`;
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+  const log = document.getElementById("log");
+  if (log) log.textContent += `\n[PROMISE ERROR] ${e.reason}\n`;
+});
+
+const _stage = document.getElementById("stage");
+if (_stage) _stage.style.background = "#3b0764"; // morado para confirmar que JS corre
+
+const _log = document.getElementById("log");
+if (_log) _log.textContent = "[OK] app.js se está ejecutando\n";
+
+// ===== IMPORTS (local desde /vendor) =====
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const ui = {
   stage: document.getElementById("stage"),
