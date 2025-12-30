@@ -18,7 +18,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate avatar with Ready Player Me model \\(blendshapes + visemes\\)\n\n- Realistic avatar with ARKit blendshapes \\(52 expressions\\)\n- Oculus Visemes for lip sync \\(15 visemes\\)\n- Full body avatar for better presentation\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(ls:*)"
     ]
   }
 }
