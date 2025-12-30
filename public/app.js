@@ -60,9 +60,9 @@ occluderMat.depthTest = true;
 const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), occluderMat);
 // AJUSTA: posición del "borde de mesa / portátil"
 // y = altura del corte (donde termina el laptop), z = delante del avatar
-occluder.position.set(0, 1.02, 0.55);
+occluder.position.set(0, 0.75, 0.55);  // MUY BAJO para no tapar cara
 occluder.rotation.set(0, 0, 0);
-scene.add(occluder);
+// scene.add(occluder);  // TEMPORALMENTE DESACTIVADO para debug
 
 function resizeRenderer() {
   const w = ui.stage.clientWidth || 1;
@@ -92,7 +92,7 @@ function findMorphIndex(mesh, keys) {
 const AVATAR_SCALE = 1.0;
 const AVATAR_X = 0.0;       // izquierda/derecha
 const AVATAR_Y = -0.35;     // arriba/abajo (menos negativo = más alto)
-const AVATAR_Z = -0.45;     // más negativo = más atrás (detrás de la mesa)
+const AVATAR_Z = 0.15;      // DEBUG: adelante para verlo (luego -0.30)
 
 function firstSkinnedMesh(root) {
   let sk = null;
@@ -163,6 +163,11 @@ async function loadAvatar() {
   });
 
   scene.add(avatarRoot);
+
+  // Asegurar que cabeza/cara siempre visible
+  avatarRoot.traverse(o => {
+    if (/head|face|eye|teeth|tongue/i.test(o.name || "")) o.visible = true;
+  });
 
   // Posicionar y aplicar pose sentada
   positionAvatar(avatarRoot);
