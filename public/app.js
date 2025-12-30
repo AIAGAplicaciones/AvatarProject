@@ -367,8 +367,8 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "w")          occluder.position.z += step;  // W/S para Z
   if (e.key === "s")          occluder.position.z -= step;
 
-  if (e.key === "PageUp")     avatarRoot.position.z -= step;
-  if (e.key === "PageDown")   avatarRoot.position.z += step;
+  if (e.key === "PageUp" || e.key === "q")   avatarRoot.position.z -= step;  // Q = atrás
+  if (e.key === "PageDown" || e.key === "e") avatarRoot.position.z += step;  // E = adelante
 
   logLine(`occ: x=${occluder.position.x.toFixed(2)} y=${occluder.position.y.toFixed(2)} z=${occluder.position.z.toFixed(2)} | av: z=${avatarRoot.position.z.toFixed(2)}`);
 });
