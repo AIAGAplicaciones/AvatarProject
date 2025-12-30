@@ -37,9 +37,9 @@ ui.stage.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 // NO scene.background - dejamos transparente
 
-const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 200);
-camera.position.set(0, 1.4, 2.2);
-camera.lookAt(0, 1.2, 0);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.01, 200);
+camera.position.set(0, 1.35, 2.2);
+camera.lookAt(0, 1.25, 0);
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 const dir = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -74,28 +74,47 @@ function findMorphIndex(mesh, keys) {
   return null;
 }
 
-function frameObject(obj) {
-  const box = new THREE.Box3().setFromObject(obj);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
+// ===== POSE SENTADA =====
+// Ajusta estos valores para posicionar el avatar
+const AVATAR_SCALE = 1.15;
+const AVATAR_X = 0.0;      // izquierda/derecha
+const AVATAR_Y = -0.55;    // arriba/abajo
+const AVATAR_Z = 0.25;     // delante/detrás
 
-  // centra el modelo
-  obj.position.x += (obj.position.x - center.x);
-  obj.position.y += (obj.position.y - center.y);
-  obj.position.z += (obj.position.z - center.z);
+function firstSkinnedMesh(root) {
+  let sk = null;
+  root.traverse(o => { if (!sk && o.isSkinnedMesh) sk = o; });
+  return sk;
+}
 
-  // distancia de cámara según tamaño
-  const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  const fov = camera.fov * (Math.PI / 180);
-  let camDist = (maxDim / 2) / Math.tan(fov / 2);
-  camDist *= 1.6;
+function boneBy(root, patterns) {
+  const sk = firstSkinnedMesh(root);
+  if (!sk?.skeleton) return null;
+  return sk.skeleton.bones.find(b =>
+    patterns.some(re => re.test(b.name))
+  ) || null;
+}
 
-  camera.position.set(0, maxDim * 0.6, camDist);
-  camera.lookAt(0, maxDim * 0.4, 0);
+function applySeatedPose(root) {
+  const LArm = boneBy(root, [/LeftArm/i, /UpperArm_L/i, /Arm_L/i]);
+  const LFore = boneBy(root, [/LeftForeArm/i, /LowerArm_L/i, /ForeArm_L/i]);
+  const RArm = boneBy(root, [/RightArm/i, /UpperArm_R/i, /Arm_R/i]);
+  const RFore = boneBy(root, [/RightForeArm/i, /LowerArm_R/i, /ForeArm_R/i]);
 
-  camera.near = camDist / 100;
-  camera.far = camDist * 100;
-  camera.updateProjectionMatrix();
+  // Brazos hacia abajo (anti T-pose)
+  if (LArm) { LArm.rotation.x = -1.25; LArm.rotation.z = 0.15; }
+  if (RArm) { RArm.rotation.x = -1.25; RArm.rotation.z = -0.15; }
+
+  // Antebrazos hacia delante (como apoyados en mesa)
+  if (LFore) { LFore.rotation.x = -0.35; }
+  if (RFore) { RFore.rotation.x = -0.35; }
+
+  logLine("Pose sentada aplicada ✅");
+}
+
+function positionAvatar(root) {
+  root.scale.setScalar(AVATAR_SCALE);
+  root.position.set(AVATAR_X, AVATAR_Y, AVATAR_Z);
 }
 
 async function loadAvatar() {
@@ -122,7 +141,10 @@ async function loadAvatar() {
   });
 
   scene.add(avatarRoot);
-  frameObject(avatarRoot);
+
+  // Posicionar y aplicar pose sentada
+  positionAvatar(avatarRoot);
+  applySeatedPose(avatarRoot);
 
   logLine("Avatar cargado ✅");
   if (mouthIndex !== null) logLine("Lip-sync disponible ✅");
