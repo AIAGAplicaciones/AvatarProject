@@ -59,8 +59,8 @@ const occluderMat = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide
 });
 
-const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), occluderMat);
-occluder.position.set(0, 0.85, 0.35);  // posición segura para calibrar
+const occluder = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.0), occluderMat);
+occluder.position.set(0, 1.0, 0.3);  // pequeño para ver movimiento
 occluder.rotation.set(0, 0, 0);
 scene.add(occluder);
 
@@ -358,17 +358,19 @@ ui.btnStop.onclick = () => {
 // ===== CALIBRACIÓN: controles de teclado =====
 window.addEventListener("keydown", (e) => {
   if (!avatarRoot) return;
-  const step = e.shiftKey ? 0.05 : 0.01;
+  const step = e.shiftKey ? 0.20 : 0.05;  // pasos grandes para ver
 
   if (e.key === "ArrowUp")    occluder.position.y += step;
   if (e.key === "ArrowDown")  occluder.position.y -= step;
-  if (e.key === "ArrowRight") occluder.position.z += step;
-  if (e.key === "ArrowLeft")  occluder.position.z -= step;
+  if (e.key === "ArrowRight") occluder.position.x += step;  // X para ver movimiento
+  if (e.key === "ArrowLeft")  occluder.position.x -= step;
+  if (e.key === "w")          occluder.position.z += step;  // W/S para Z
+  if (e.key === "s")          occluder.position.z -= step;
 
   if (e.key === "PageUp")     avatarRoot.position.z -= step;
   if (e.key === "PageDown")   avatarRoot.position.z += step;
 
-  logLine(`occ: y=${occluder.position.y.toFixed(2)} z=${occluder.position.z.toFixed(2)} | av: z=${avatarRoot.position.z.toFixed(2)}`);
+  logLine(`occ: x=${occluder.position.x.toFixed(2)} y=${occluder.position.y.toFixed(2)} z=${occluder.position.z.toFixed(2)} | av: z=${avatarRoot.position.z.toFixed(2)}`);
 });
 
 // ===== INIT =====
