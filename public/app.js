@@ -51,21 +51,11 @@ const fill = new THREE.DirectionalLight(0xffffff, 0.5);
 fill.position.set(0, 1, 3);
 scene.add(fill);
 
-// ===== OCULTADOR - MODO CALIBRACIÓN (rojo visible) =====
-const occluderMat = new THREE.MeshBasicMaterial({
-  color: 0xff0000,
-  transparent: true,
-  opacity: 0.25,
-  side: THREE.DoubleSide
-});
-
-const occluder = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.0), occluderMat);
-occluder.position.set(0, 1.0, 0.3);  // pequeño para ver movimiento
-occluder.rotation.set(0, 0, 0);
-scene.add(occluder);
-
-// Helper de ejes para orientarse
-scene.add(new THREE.AxesHelper(0.5));
+// ===== CÁMARA PARA VIDEOLLAMADA (solo cabeza) =====
+camera.fov = 25;
+camera.position.set(0, 1.55, 2.25);
+camera.lookAt(0, 1.55, 0);
+camera.updateProjectionMatrix();
 
 function resizeRenderer() {
   const w = ui.stage.clientWidth || 1;
@@ -90,12 +80,12 @@ function findMorphIndex(mesh, keys) {
   return null;
 }
 
-// ===== POSE SENTADA =====
-// Ajusta estos valores para posicionar el avatar
-const AVATAR_SCALE = 1.0;
+// ===== POSICIÓN CABEZA =====
+// Solo mostramos la cabeza, el cuerpo está en la imagen de fondo
+const AVATAR_SCALE = 1.2;
 const AVATAR_X = 0.0;       // izquierda/derecha
-const AVATAR_Y = -0.35;     // arriba/abajo (menos negativo = más alto)
-const AVATAR_Z = 0.00;      // CALIBRACIÓN: centro seguro
+const AVATAR_Y = 0.15;      // arriba/abajo
+const AVATAR_Z = 0.0;       // delante/detrás
 
 function firstSkinnedMesh(root) {
   let sk = null;
@@ -144,33 +134,40 @@ async function loadAvatar() {
   const gltf = await loader.loadAsync("/avatar.glb");
   avatarRoot = gltf.scene;
 
-  // por si viene enorme/pequeño: normaliza un poco
+  // Mostrar SOLO la cabeza (el cuerpo está en la imagen de fondo)
   avatarRoot.traverse((o) => {
     if (o.isMesh) {
-      o.frustumCulled = false; // evita rarezas de culling
+      o.frustumCulled = false;
       o.castShadow = false;
       o.receiveShadow = false;
 
-      // CALIBRACIÓN: no ocultar nada por ahora
-      // if (/arm|hand|finger/i.test(o.name || "")) {
-      //   o.visible = false;
-      // }
+      const n = (o.name || "").toLowerCase();
 
-      // Buscar morph targets
-      if (!mouthTarget && o.morphTargetInfluences && o.morphTargetInfluences.length) {
+      // Solo mostrar partes de la cabeza
+      const isHead =
+        n.includes("head") ||
+        n.includes("face") ||
+        n.includes("teeth") ||
+        n.includes("tongue") ||
+        n.includes("eye") ||
+        n.includes("eyebrow") ||
+        n.includes("lash") ||
+        n.includes("hair") ||
+        n.includes("beard");
+
+      o.visible = isHead;
+
+      // Buscar morph targets (solo en meshes visibles)
+      if (isHead && !mouthTarget && o.morphTargetInfluences && o.morphTargetInfluences.length) {
         mouthTarget = o;
         mouthIndex = findMorphIndex(o, ["JawOpen", "jawOpen", "MouthOpen", "mouthOpen", "viseme_aa"]);
         blinkIndex = findMorphIndex(o, ["Blink", "blink", "EyeBlink", "eyeBlink", "eyeBlinkLeft"]);
+        logLine("Morphs: " + Object.keys(o.morphTargetDictionary || {}).join(", "));
       }
     }
   });
 
   scene.add(avatarRoot);
-
-  // Asegurar que cabeza/cara siempre visible
-  avatarRoot.traverse(o => {
-    if (/head|face|eye|teeth|tongue/i.test(o.name || "")) o.visible = true;
-  });
 
   // Posicionar y aplicar pose sentada
   positionAvatar(avatarRoot);
@@ -355,32 +352,26 @@ ui.btnStop.onclick = () => {
   disconnectRealtime();
 };
 
-// ===== CALIBRACIÓN: controles de teclado =====
+// ===== AJUSTE CABEZA (teclas para calibrar posición) =====
 window.addEventListener("keydown", (e) => {
   if (!avatarRoot) return;
-  const step = e.shiftKey ? 0.20 : 0.05;  // pasos grandes para ver
+  const step = e.shiftKey ? 0.10 : 0.02;
 
-  if (e.key === "ArrowUp")    occluder.position.y += step;
-  if (e.key === "ArrowDown")  occluder.position.y -= step;
-  if (e.key === "ArrowRight") occluder.position.x += step;  // X para ver movimiento
-  if (e.key === "ArrowLeft")  occluder.position.x -= step;
-  if (e.key === "w")          occluder.position.z += step;  // W/S para Z
-  if (e.key === "s")          occluder.position.z -= step;
+  if (e.key === "ArrowUp")    avatarRoot.position.y += step;
+  if (e.key === "ArrowDown")  avatarRoot.position.y -= step;
+  if (e.key === "ArrowRight") avatarRoot.position.x += step;
+  if (e.key === "ArrowLeft")  avatarRoot.position.x -= step;
+  if (e.key === "+")          avatarRoot.scale.multiplyScalar(1.05);
+  if (e.key === "-")          avatarRoot.scale.multiplyScalar(0.95);
 
-  if (e.key === "PageUp" || e.key === "q")   avatarRoot.position.z -= step;  // Q = atrás
-  if (e.key === "PageDown" || e.key === "e") avatarRoot.position.z += step;  // E = adelante
-
-  logLine(`occ: x=${occluder.position.x.toFixed(2)} y=${occluder.position.y.toFixed(2)} z=${occluder.position.z.toFixed(2)} | av: z=${avatarRoot.position.z.toFixed(2)}`);
+  logLine(`pos: x=${avatarRoot.position.x.toFixed(2)} y=${avatarRoot.position.y.toFixed(2)} | scale=${avatarRoot.scale.x.toFixed(2)}`);
 });
 
 // ===== INIT =====
 (async () => {
   try {
     await loadAvatar();
-    // Forzar todo visible para calibración
-    avatarRoot.visible = true;
-    avatarRoot.traverse(o => { o.visible = true; });
-    logLine("CALIBRACIÓN: Flechas=occluder, PageUp/Down=avatar");
+    logLine("Flechas=mover cabeza, +/-=tamaño");
   } catch (e) {
     console.error(e);
     logLine("ERROR cargando avatar: " + (e?.message || e));
