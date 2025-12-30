@@ -24,18 +24,6 @@
         z-index: 1;
       }
 
-      /* capa delantera (mesa+portátil) tapa el torso del avatar */
-      #foreground {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 60vh;
-        background: url("/office-foreground.png") center bottom/cover no-repeat;
-        z-index: 2;
-        pointer-events: none;
-      }
-
       #panel { padding: 16px; background: #111827; color: #e5e7eb; overflow: auto; }
       button { width: 100%; padding: 12px; margin: 6px 0; cursor: pointer; }
       #log { white-space: pre-wrap; font-size: 13px; opacity: 0.9; }
@@ -43,9 +31,7 @@
     </style>
   </head>
   <body>
-    <div id="stage">
-      <div id="foreground"></div>
-    </div>
+    <div id="stage"></div>
 
     <div id="panel">
       <div class="pill" id="status">Desconectado</div>

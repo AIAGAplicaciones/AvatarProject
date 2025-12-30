@@ -51,6 +51,19 @@ const fill = new THREE.DirectionalLight(0xffffff, 0.5);
 fill.position.set(0, 1, 3);
 scene.add(fill);
 
+// ===== OCULTADOR INVISIBLE (tapa avatar por debajo de la mesa) =====
+const occluderMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
+occluderMat.colorWrite = false;  // no pinta color (invisible)
+occluderMat.depthWrite = true;   // pero SÍ escribe profundidad (oculta)
+occluderMat.depthTest = true;
+
+const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 4), occluderMat);
+// AJUSTA: posición del "borde de mesa / portátil"
+// El plano está delante del avatar (z=0) y tapa todo por debajo de y=1.05
+occluder.position.set(0, 1.05, 0.1);
+occluder.rotation.x = 0; // plano vertical mirando a cámara
+scene.add(occluder);
+
 function resizeRenderer() {
   const w = ui.stage.clientWidth || 1;
   const h = ui.stage.clientHeight || 1;
@@ -79,7 +92,7 @@ function findMorphIndex(mesh, keys) {
 const AVATAR_SCALE = 1.15;
 const AVATAR_X = 0.0;      // izquierda/derecha
 const AVATAR_Y = -0.55;    // arriba/abajo
-const AVATAR_Z = 0.25;     // delante/detrás
+const AVATAR_Z = -0.30;    // más negativo = más atrás (detrás de la mesa)
 
 function firstSkinnedMesh(root) {
   let sk = null;
@@ -96,18 +109,22 @@ function boneBy(root, patterns) {
 }
 
 function applySeatedPose(root) {
-  const LArm = boneBy(root, [/LeftArm/i, /UpperArm_L/i, /Arm_L/i]);
+  // Reset skeleton to base pose first
+  const sk = firstSkinnedMesh(root);
+  if (sk?.skeleton) sk.skeleton.pose();
+
+  const LArm = boneBy(root, [/LeftArm/i, /UpperArm_L/i, /Arm_L/i, /mixamorigLeftArm/i]);
   const LFore = boneBy(root, [/LeftForeArm/i, /LowerArm_L/i, /ForeArm_L/i]);
-  const RArm = boneBy(root, [/RightArm/i, /UpperArm_R/i, /Arm_R/i]);
+  const RArm = boneBy(root, [/RightArm/i, /UpperArm_R/i, /Arm_R/i, /mixamorigRightArm/i]);
   const RFore = boneBy(root, [/RightForeArm/i, /LowerArm_R/i, /ForeArm_R/i]);
 
-  // Brazos hacia abajo (anti T-pose)
-  if (LArm) { LArm.rotation.x = -1.25; LArm.rotation.z = 0.15; }
-  if (RArm) { RArm.rotation.x = -1.25; RArm.rotation.z = -0.15; }
+  // Brazos hacia abajo (rotation.z para bajar desde T-pose)
+  if (LArm) { LArm.rotation.z = 1.2; LArm.rotation.x = 0.0; }
+  if (RArm) { RArm.rotation.z = -1.2; RArm.rotation.x = 0.0; }
 
-  // Antebrazos hacia delante (como apoyados en mesa)
-  if (LFore) { LFore.rotation.x = -0.35; }
-  if (RFore) { RFore.rotation.x = -0.35; }
+  // Antebrazos ligeramente doblados
+  if (LFore) { LFore.rotation.y = 0.3; }
+  if (RFore) { RFore.rotation.y = -0.3; }
 
   logLine("Pose sentada aplicada ✅");
 }
