@@ -60,9 +60,9 @@ occluderMat.depthTest = true;
 const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), occluderMat);
 // AJUSTA: posición del "borde de mesa / portátil"
 // y = altura del corte (borde laptop), z = delante del avatar
-occluder.position.set(0, 1.03, 0.62);
+occluder.position.set(0, 0.78, 0.58);  // más bajo = no tapa la cabeza
 occluder.rotation.set(0, 0, 0);
-scene.add(occluder);  // ACTIVADO - tapa torso por debajo del laptop
+scene.add(occluder);
 
 function resizeRenderer() {
   const w = ui.stage.clientWidth || 1;
@@ -92,7 +92,7 @@ function findMorphIndex(mesh, keys) {
 const AVATAR_SCALE = 1.0;
 const AVATAR_X = 0.0;       // izquierda/derecha
 const AVATAR_Y = -0.35;     // arriba/abajo (menos negativo = más alto)
-const AVATAR_Z = -0.35;     // atrás (sentado en silla)
+const AVATAR_Z = -0.30;     // atrás (sentado en silla)
 
 function firstSkinnedMesh(root) {
   let sk = null;
