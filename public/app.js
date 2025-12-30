@@ -57,12 +57,11 @@ occluderMat.colorWrite = false;  // no pinta color (invisible)
 occluderMat.depthWrite = true;   // pero SÍ escribe profundidad (oculta)
 occluderMat.depthTest = true;
 
-const occluder = new THREE.Mesh(new THREE.PlaneGeometry(8, 2.4), occluderMat);
+const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), occluderMat);
 // AJUSTA: posición del "borde de mesa / portátil"
-// Baja y para que NO tape la cabeza, solo el torso por debajo del laptop
-occluder.position.set(0, 0.85, 0.55);
+// y = altura del corte (donde termina el laptop), z = delante del avatar
+occluder.position.set(0, 1.02, 0.55);
 occluder.rotation.set(0, 0, 0);
-occluder.renderOrder = 1; // procesar antes que el avatar
 scene.add(occluder);
 
 function resizeRenderer() {
@@ -93,7 +92,7 @@ function findMorphIndex(mesh, keys) {
 const AVATAR_SCALE = 1.0;
 const AVATAR_X = 0.0;       // izquierda/derecha
 const AVATAR_Y = -0.35;     // arriba/abajo (menos negativo = más alto)
-const AVATAR_Z = -0.28;     // más negativo = más atrás
+const AVATAR_Z = -0.45;     // más negativo = más atrás (detrás de la mesa)
 
 function firstSkinnedMesh(root) {
   let sk = null;
@@ -148,6 +147,11 @@ async function loadAvatar() {
       o.frustumCulled = false; // evita rarezas de culling
       o.castShadow = false;
       o.receiveShadow = false;
+
+      // Ocultar brazos y manos (evita T-pose visible)
+      if (/arm|hand|finger/i.test(o.name || "")) {
+        o.visible = false;
+      }
 
       // Buscar morph targets
       if (!mouthTarget && o.morphTargetInfluences && o.morphTargetInfluences.length) {
