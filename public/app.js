@@ -51,18 +51,21 @@ const fill = new THREE.DirectionalLight(0xffffff, 0.5);
 fill.position.set(0, 1, 3);
 scene.add(fill);
 
-// ===== OCULTADOR INVISIBLE (tapa avatar por debajo de la mesa) =====
-const occluderMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
-occluderMat.colorWrite = false;  // no pinta color (invisible)
-occluderMat.depthWrite = true;   // pero SÍ escribe profundidad (oculta)
-occluderMat.depthTest = true;
+// ===== OCULTADOR - MODO CALIBRACIÓN (rojo visible) =====
+const occluderMat = new THREE.MeshBasicMaterial({
+  color: 0xff0000,
+  transparent: true,
+  opacity: 0.25,
+  side: THREE.DoubleSide
+});
 
 const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 3), occluderMat);
-// AJUSTA: posición del "borde de mesa / portátil"
-// y = altura del corte (borde laptop), z = delante del avatar
-occluder.position.set(0, 0.78, 0.58);  // más bajo = no tapa la cabeza
+occluder.position.set(0, 0.85, 0.35);  // posición segura para calibrar
 occluder.rotation.set(0, 0, 0);
 scene.add(occluder);
+
+// Helper de ejes para orientarse
+scene.add(new THREE.AxesHelper(0.5));
 
 function resizeRenderer() {
   const w = ui.stage.clientWidth || 1;
@@ -92,7 +95,7 @@ function findMorphIndex(mesh, keys) {
 const AVATAR_SCALE = 1.0;
 const AVATAR_X = 0.0;       // izquierda/derecha
 const AVATAR_Y = -0.35;     // arriba/abajo (menos negativo = más alto)
-const AVATAR_Z = -0.30;     // atrás (sentado en silla)
+const AVATAR_Z = 0.00;      // CALIBRACIÓN: centro seguro
 
 function firstSkinnedMesh(root) {
   let sk = null;
@@ -148,10 +151,10 @@ async function loadAvatar() {
       o.castShadow = false;
       o.receiveShadow = false;
 
-      // Ocultar brazos y manos (evita T-pose visible)
-      if (/arm|hand|finger/i.test(o.name || "")) {
-        o.visible = false;
-      }
+      // CALIBRACIÓN: no ocultar nada por ahora
+      // if (/arm|hand|finger/i.test(o.name || "")) {
+      //   o.visible = false;
+      // }
 
       // Buscar morph targets
       if (!mouthTarget && o.morphTargetInfluences && o.morphTargetInfluences.length) {
@@ -352,10 +355,30 @@ ui.btnStop.onclick = () => {
   disconnectRealtime();
 };
 
+// ===== CALIBRACIÓN: controles de teclado =====
+window.addEventListener("keydown", (e) => {
+  if (!avatarRoot) return;
+  const step = e.shiftKey ? 0.05 : 0.01;
+
+  if (e.key === "ArrowUp")    occluder.position.y += step;
+  if (e.key === "ArrowDown")  occluder.position.y -= step;
+  if (e.key === "ArrowRight") occluder.position.z += step;
+  if (e.key === "ArrowLeft")  occluder.position.z -= step;
+
+  if (e.key === "PageUp")     avatarRoot.position.z -= step;
+  if (e.key === "PageDown")   avatarRoot.position.z += step;
+
+  logLine(`occ: y=${occluder.position.y.toFixed(2)} z=${occluder.position.z.toFixed(2)} | av: z=${avatarRoot.position.z.toFixed(2)}`);
+});
+
 // ===== INIT =====
 (async () => {
   try {
     await loadAvatar();
+    // Forzar todo visible para calibración
+    avatarRoot.visible = true;
+    avatarRoot.traverse(o => { o.visible = true; });
+    logLine("CALIBRACIÓN: Flechas=occluder, PageUp/Down=avatar");
   } catch (e) {
     console.error(e);
     logLine("ERROR cargando avatar: " + (e?.message || e));
