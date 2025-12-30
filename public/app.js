@@ -57,11 +57,12 @@ occluderMat.colorWrite = false;  // no pinta color (invisible)
 occluderMat.depthWrite = true;   // pero SÍ escribe profundidad (oculta)
 occluderMat.depthTest = true;
 
-const occluder = new THREE.Mesh(new THREE.PlaneGeometry(10, 4), occluderMat);
+const occluder = new THREE.Mesh(new THREE.PlaneGeometry(8, 2.4), occluderMat);
 // AJUSTA: posición del "borde de mesa / portátil"
-// El plano está delante del avatar (z=0) y tapa todo por debajo de y=1.05
-occluder.position.set(0, 1.05, 0.1);
-occluder.rotation.x = 0; // plano vertical mirando a cámara
+// Baja y para que NO tape la cabeza, solo el torso por debajo del laptop
+occluder.position.set(0, 0.85, 0.55);
+occluder.rotation.set(0, 0, 0);
+occluder.renderOrder = 1; // procesar antes que el avatar
 scene.add(occluder);
 
 function resizeRenderer() {
@@ -89,10 +90,10 @@ function findMorphIndex(mesh, keys) {
 
 // ===== POSE SENTADA =====
 // Ajusta estos valores para posicionar el avatar
-const AVATAR_SCALE = 1.15;
-const AVATAR_X = 0.0;      // izquierda/derecha
-const AVATAR_Y = -0.55;    // arriba/abajo
-const AVATAR_Z = -0.30;    // más negativo = más atrás (detrás de la mesa)
+const AVATAR_SCALE = 1.0;
+const AVATAR_X = 0.0;       // izquierda/derecha
+const AVATAR_Y = -0.35;     // arriba/abajo (menos negativo = más alto)
+const AVATAR_Z = -0.28;     // más negativo = más atrás
 
 function firstSkinnedMesh(root) {
   let sk = null;
