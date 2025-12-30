@@ -52,9 +52,9 @@ fill.position.set(0, 1, 3);
 scene.add(fill);
 
 // ===== CÁMARA PARA VIDEOLLAMADA (solo cabeza) =====
-camera.fov = 25;
-camera.position.set(0, 1.55, 2.25);
-camera.lookAt(0, 1.55, 0);
+camera.fov = 35;
+camera.position.set(0, 1.50, 1.8);
+camera.lookAt(0, 1.50, 0);
 camera.updateProjectionMatrix();
 
 function resizeRenderer() {
@@ -82,9 +82,9 @@ function findMorphIndex(mesh, keys) {
 
 // ===== POSICIÓN CABEZA =====
 // Solo mostramos la cabeza, el cuerpo está en la imagen de fondo
-const AVATAR_SCALE = 1.2;
+const AVATAR_SCALE = 0.95;
 const AVATAR_X = 0.0;       // izquierda/derecha
-const AVATAR_Y = 0.15;      // arriba/abajo
+const AVATAR_Y = 0.0;       // arriba/abajo
 const AVATAR_Z = 0.0;       // delante/detrás
 
 function firstSkinnedMesh(root) {
